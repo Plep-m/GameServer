@@ -17,7 +17,7 @@ namespace LeagueSandbox.GameServer.Handlers
     {
         private Dictionary<IChampion, bool> _votes = new Dictionary<IChampion, bool>();
         private Game _game;
-        private ILog _log;
+        private static ILog _logger = LoggerProvider.GetLogger();
         private bool toEnd = false;
         private float toEndTimer = 3000.0f;
 
@@ -31,7 +31,6 @@ namespace LeagueSandbox.GameServer.Handlers
         // TODO: The first two parameters are in milliseconds, the third is seconds. QoL fix this?
         public SurrenderHandler(Game g, TeamId team, float minTime, float restTime, float length)
         {
-            _log = LoggerProvider.GetLogger();
             _game = g;
             Team = team;
             SurrenderMinimumTime = minTime;
@@ -71,18 +70,19 @@ namespace LeagueSandbox.GameServer.Handlers
             }
             _votes[who] = vote;
             Tuple<int, int> voteCounts = GetVoteCounts();
-            int total = _game.PlayerManager.GetPlayers().Count;
+            var players = _game.PlayerManager.GetPlayers(false);
+            int total = players.Count;
 
-            _log.Info($"Champion {who.Model} voted {vote}. Currently {voteCounts.Item1} yes votes, {voteCounts.Item2} no votes, with {total} total players");
+            _logger.Info($"Champion {who.Model} voted {vote}. Currently {voteCounts.Item1} yes votes, {voteCounts.Item2} no votes, with {total} total players");
 
             _game.PacketNotifier.NotifyTeamSurrenderVote(who, open, vote, (byte)voteCounts.Item1, (byte)voteCounts.Item2, (byte)total, SurrenderLength);
 
             if (voteCounts.Item1 >= total - 1)
             {
                 IsSurrenderActive = false;
-                foreach (var p in _game.PlayerManager.GetPlayers(true))
+                foreach (var p in players)
                 {
-                    _game.PacketNotifier.NotifyTeamSurrenderStatus((int)p.Item1, Team, SurrenderReason.SurrenderAgreed, (byte)voteCounts.Item1, (byte)voteCounts.Item2); // TOOD: fix id casting
+                    _game.PacketNotifier.NotifyTeamSurrenderStatus(p.ClientId, Team, SurrenderReason.SurrenderAgreed, (byte)voteCounts.Item1, (byte)voteCounts.Item2);
                 }
 
                 toEnd = true;
@@ -95,8 +95,14 @@ namespace LeagueSandbox.GameServer.Handlers
             {
                 IsSurrenderActive = false;
                 Tuple<int, int> count = GetVoteCounts();
-                foreach (var p in _game.PlayerManager.GetPlayers().Where(kv => kv.Item2.Team == Team))
-                    _game.PacketNotifier.NotifyTeamSurrenderStatus((int)p.Item1, Team, SurrenderReason.VoteWasNoSurrender, (byte)count.Item1, (byte)count.Item2); // TODO: fix id casting
+                var players = _game.PlayerManager.GetPlayers(false);
+                foreach (var p in players)
+                {
+                    if(p.Team == Team)
+                    {
+                        _game.PacketNotifier.NotifyTeamSurrenderStatus(p.ClientId, Team, SurrenderReason.VoteWasNoSurrender, (byte)count.Item1, (byte)count.Item2);
+                    }
+                }
             }
 
             if (toEnd)
@@ -108,7 +114,7 @@ namespace LeagueSandbox.GameServer.Handlers
                     INexus ourNexus = (INexus)_game.ObjectManager.GetObjects().First(o => o.Value is INexus && o.Value.Team == Team).Value;
                     if (ourNexus == null)
                     {
-                        _log.Error("Unable to surrender correctly, couldn't find the nexus!");
+                        _logger.Error("Unable to surrender correctly, couldn't find the nexus!");
                         return;
                     }
                     ourNexus.Die(null);

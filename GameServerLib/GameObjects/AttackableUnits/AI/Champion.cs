@@ -12,23 +12,20 @@ using LeagueSandbox.GameServer.API;
 using LeaguePackets.Game.Events;
 using System;
 using GameServerLib.GameObjects.AttackableUnits;
-using static GameServerCore.Content.HashFunctions;
 using GameServerCore.Scripting.CSharp;
+using LeagueSandbox.GameServer.Logging;
+using log4net;
 
 namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
 {
     public class Champion : ObjAiBase, IChampion
     {
         private float _championHitFlagTimer;
+        private static ILog _logger = LoggerProvider.GetLogger();
         /// <summary>
         /// Player number ordered by the config file.
         /// </summary>
-        private uint _playerId;
-        /// <summary>
-        /// Player number in the team ordered by the config file.
-        /// Used in nowhere but to set spawnpoint at the game start.
-        /// </summary>
-        private uint _playerTeamSpecialId;
+        public int ClientId { get; private set; }
         private uint _playerHitId;
         private List<IToolTipData> _tipsChanged;
         public IShop Shop { get; protected set; }
@@ -48,8 +45,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
 
         public Champion(Game game,
                         string model,
-                        uint playerId,
-                        uint playerTeamSpecialId,
                         IRuneCollection runeList,
                         ITalentInventory talentInventory,
                         ClientInfo clientInfo,
@@ -58,8 +53,8 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
                         IStats stats = null)
             : base(game, model, 30, new Vector2(), 1200, clientInfo.SkinNo, netId, team, stats)
         {
-            _playerId = playerId;
-            _playerTeamSpecialId = playerTeamSpecialId;
+            //TODO: Champion.ClientInfo?
+            ClientId = clientInfo.ClientId;
             RuneList = runeList;
 
             Inventory = InventoryManager.CreateInventory(game.PacketNotifier);
@@ -100,11 +95,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             }
         }
 
-        private string GetPlayerIndex()
-        {
-            return $"player{_playerId}";
-        }
-
         public override void OnAdded()
         {
             _game.ObjectManager.AddChampion(this);
@@ -125,6 +115,11 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             }
             Stats.SetSummonerSpellEnabled(0, true);
             Stats.SetSummonerSpellEnabled(1, true);
+
+            while (Stats.Level < _game.Map.MapScript.MapScriptMetadata.InitialLevel)
+            {
+                this.LevelUp(true);
+            }
         }
 
         protected override void OnSpawn(int userId, TeamId team, bool doVision)
@@ -133,7 +128,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             _game.PacketNotifier.NotifyS2C_CreateHero(peerInfo, userId, doVision);
             _game.PacketNotifier.NotifyAvatarInfo(peerInfo, userId);
 
-            bool ownChamp = peerInfo.PlayerId == userId;
+            bool ownChamp = peerInfo.ClientId == userId;
             if (ownChamp)
             {
                 // Buy blue pill
@@ -168,38 +163,15 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
 
         public int GetTeamSize()
         {
-            var blueTeamSize = 0;
-            var purpTeamSize = 0;
-
-            foreach (var player in _game.Config.Players.Values)
+            var teamSize = 0;
+            foreach (var player in _game.Config.Players)
             {
-                if (player.Team.ToLower().Equals("blue"))
+                if (player.Team == Team)
                 {
-                    blueTeamSize++;
-                }
-                else
-                {
-                    purpTeamSize++;
+                    teamSize++;
                 }
             }
-
-            var playerIndex = GetPlayerIndex();
-            if (_game.Config.Players.ContainsKey(playerIndex))
-            {
-                switch (_game.Config.Players[playerIndex].Team.ToLower())
-                {
-                    case "blue":
-                        return blueTeamSize;
-                    default:
-                        return purpTeamSize;
-                }
-            }
-
-            return 0;
-        }
-        public uint GetPlayerId()
-        {
-            return _playerId;
+            return teamSize;
         }
 
         public Vector2 GetSpawnPosition(int index)
@@ -215,12 +187,13 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             {
                 return _game.Map.PlayerSpawnPoints[Team][1][1];
             }
-
+            //TODO: wrap in try {} catch
             return _game.Map.MapScript.GetFountainPosition(Team);
         }
 
         public Vector2 GetRespawnPosition()
         {
+            //TODO: wrap in try {} catch
             return _game.Map.MapScript.GetFountainPosition(Team);
         }
 
@@ -267,7 +240,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             else if (!Stats.IsGeneratingGold && _game.GameTime >= _game.Map.MapScript.MapScriptMetadata.AIVars.AmbientGoldDelay * 1000f)
             {
                 Stats.IsGeneratingGold = true;
-                Logger.Debug("Generating Gold!");
+                _logger.Debug("Generating Gold!");
             }
 
             if (RespawnTimer > 0)
@@ -357,7 +330,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
 
             if (stats.Level < _game.Map.MapScript.MapScriptMetadata.MaxLevel && (stats.Level < 1 || (stats.Experience >= expMap[stats.Level - 1]))) //The - 1s is there because the XP files don't have level 1
             {
-                Logger.Debug("Champion " + Model + " leveled up to " + stats.Level);
+                _logger.Debug("Champion " + Model + " leveled up to " + stats.Level);
                 if (stats.Level <= 18)
                 {
                     SkillPoints++;
@@ -419,7 +392,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             if (cKiller == null && _championHitFlagTimer > 0)
             {
                 cKiller = _game.ObjectManager.GetObjectById(_playerHitId) as Champion;
-                Logger.Debug("Killed by turret, minion or monster, but still  give gold to the enemy.");
+                _logger.Debug("Killed by turret, minion or monster, but still  give gold to the enemy.");
             }
 
             if (cKiller == null)

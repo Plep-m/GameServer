@@ -9,13 +9,12 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
     public class HandleSyncSimTime : PacketHandlerBase<SyncSimTimeRequest>
     {
         private readonly Game _game;
-        private readonly ILog _logger;
+        private static ILog _logger = LoggerProvider.GetLogger();
         private readonly IPlayerManager _playerManager;
 
         public HandleSyncSimTime(Game game)
         {
             _game = game;
-            _logger = LoggerProvider.GetLogger();
             _playerManager = game.PlayerManager;
         }
 
@@ -26,7 +25,7 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
             if (req.TimeLastClient > req.TimeLastServer)
             {
                 var peerInfo = _playerManager.GetPeerInfo(userId);
-                var msg = $"Player {peerInfo.PlayerId} sent an invalid heartbeat - Timestamp error (diff: {diff})";
+                var msg = $"Client {peerInfo.ClientId} sent an invalid heartbeat - Timestamp error (diff: {diff})";
                 _logger.Warn(msg);
             }
 

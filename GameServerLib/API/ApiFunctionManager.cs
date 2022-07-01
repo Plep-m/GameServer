@@ -24,7 +24,7 @@ namespace LeagueSandbox.GameServer.API
     {
         // Required variables.
         private static Game _game;
-        private static ILog _logger;
+        private static ILog _logger = LoggerProvider.GetLogger();
 
         /// <summary>
         /// Converts the given string of hex values into an array of bytes.
@@ -48,7 +48,6 @@ namespace LeagueSandbox.GameServer.API
         internal static void SetGame(Game game)
         {
             _game = game;
-            _logger = LoggerProvider.GetLogger();
         }
 
         /// <summary>
@@ -681,7 +680,7 @@ namespace LeagueSandbox.GameServer.API
             var toreturn = new List<IChampion>();
             foreach (var player in _game.PlayerManager.GetPlayers(true))
             {
-                toreturn.Add(player.Item2.Champion);
+                toreturn.Add(player.Champion);
             }
             return toreturn;
         }
@@ -931,7 +930,7 @@ namespace LeagueSandbox.GameServer.API
             {
                 _game.PacketNotifier.NotifyChangeSlotSpellData
                 (
-                    (int)_game.PlayerManager.GetClientInfoByChampion(champion).PlayerId,
+                    _game.PlayerManager.GetClientInfoByChampion(champion).ClientId,
                     target,
                     (byte)slot,
                     ChangeSlotSpellDataType.TargetingType,

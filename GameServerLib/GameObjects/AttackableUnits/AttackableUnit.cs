@@ -28,7 +28,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         private float _statUpdateTimer;
         private object _buffsLock;
         private IDeathData _death;
-        protected readonly ILog Logger;
+        private static ILog _logger = LoggerProvider.GetLogger();
 
         //TODO: Find out where this variable came from and if it can be unhardcoded
         internal const float DETECT_RANGE = 475.0f;
@@ -128,7 +128,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         ) : base(game, position, collisionRadius, collisionRadius, visionRadius, netId, team)
 
         {
-            Logger = LoggerProvider.GetLogger();
             Model = model;
 
             CharData = _game.Config.ContentManager.GetCharData(Model);
@@ -644,17 +643,17 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             // todo: check if damage dealt by disconnected players cause anything bad
             if (attacker is IChampion attackerChamp)
             {
-                attackerId = (int)_game.PlayerManager.GetClientInfoByChampion(attackerChamp).PlayerId;
+                attackerId = _game.PlayerManager.GetClientInfoByChampion(attackerChamp).ClientId;
             }
 
             if (this is IChampion targetChamp)
             {
-                targetId = (int)_game.PlayerManager.GetClientInfoByChampion(targetChamp).PlayerId;
+                targetId = _game.PlayerManager.GetClientInfoByChampion(targetChamp).ClientId;
             }
             // Show damage text for owner of pet
             if (attacker is IPet attackerPet && attackerPet.Owner is IChampion)
             {
-                attackerId = (int)_game.PlayerManager.GetClientInfoByChampion((IChampion)attackerPet.Owner).PlayerId;
+                attackerId = _game.PlayerManager.GetClientInfoByChampion((IChampion)attackerPet.Owner).ClientId;
             }
 
             if (attacker.Team != Team)

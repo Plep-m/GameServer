@@ -22,7 +22,7 @@ namespace LeagueSandbox.GameServer
     /// </summary>
     public class Config
     {
-        public Dictionary<string, IPlayerConfig> Players { get; private set; }
+        public List<IPlayerConfig> Players { get; private set; }
         public GameConfig GameConfig { get; private set; }
         public ContentManager ContentManager { get; private set; }
         public FeatureFlags GameFeatures { get; private set; }
@@ -32,6 +32,8 @@ namespace LeagueSandbox.GameServer
         public bool ChatCheatsEnabled { get; private set; }
         public string ContentPath { get; private set; }
         public bool IsDamageTextGlobal { get; private set; }
+
+        public float ForcedStart { get; private set; }
 
         private Config()
         {
@@ -82,15 +84,17 @@ namespace LeagueSandbox.GameServer
             // Load data package
             ContentManager = ContentManager.LoadDataPackage(game, GameConfig.DataPackage, ContentPath);
 
-            Players = new Dictionary<string, IPlayerConfig>();
+            Players = new List<IPlayerConfig>();
 
             // Read the player configuration
             var playerConfigurations = data.SelectToken("players");
             foreach (var player in playerConfigurations)
             {
                 var playerConfig = new PlayerConfig(player, game);
-                Players.Add($"player{playerConfig.PlayerID}", playerConfig);
+                Players.Add(playerConfig);
             }
+
+            ForcedStart = (float)(data.SelectToken("forcedStart") ?? 0) * 1000;
         }
 
         private string GetContentPath()
@@ -235,7 +239,7 @@ public class PlayerConfig : IPlayerConfig
     public string Rank { get; private set; }
     public string Name { get; private set; }
     public string Champion { get; private set; }
-    public string Team { get; private set; }
+    public TeamId Team { get; private set; }
     public short Skin { get; private set; }
     public string Summoner1 { get; private set; }
     public string Summoner2 { get; private set; }
@@ -245,15 +249,20 @@ public class PlayerConfig : IPlayerConfig
     public IRuneCollection Runes { get; }
     public ITalentInventory Talents { get; }
 
+    private static ILog _logger = LoggerProvider.GetLogger();
     public PlayerConfig(JToken playerData, Game game)
     {
-        ILog logger = LoggerProvider.GetLogger();
-
         PlayerID = (long)playerData.SelectToken("playerId");
         Rank = (string)playerData.SelectToken("rank");
         Name = (string)playerData.SelectToken("name");
         Champion = (string)playerData.SelectToken("champion");
-        Team = (string)playerData.SelectToken("team");
+
+        Team = TeamId.TEAM_PURPLE;
+        if (((string)playerData.SelectToken("team")).ToLower().Equals("blue"))
+        {
+            Team = TeamId.TEAM_BLUE;
+        }
+        
         Skin = (short)playerData.SelectToken("skin");
         Summoner1 = (string)playerData.SelectToken("summoner1");
         Summoner2 = (string)playerData.SelectToken("summoner2");
@@ -272,7 +281,7 @@ public class PlayerConfig : IPlayerConfig
         }
         else
         {
-            logger.Warn($"No runes found for player {PlayerID}!");
+            _logger.Warn($"No runes found for player {PlayerID}!");
         }
 
         Talents = new TalentInventory();
@@ -288,7 +297,7 @@ public class PlayerConfig : IPlayerConfig
                 }
                 catch
                 {
-                    logger.Warn($"Invalid Talent Rank for Talent {talent.Name}! Please use ranks between 1 and {byte.MaxValue}! Defaulting to Rank 1...");
+                    _logger.Warn($"Invalid Talent Rank for Talent {talent.Name}! Please use ranks between 1 and {byte.MaxValue}! Defaulting to Rank 1...");
                 }
                 Talents.Add(talent.Name, level);
             }

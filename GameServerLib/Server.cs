@@ -14,9 +14,9 @@ namespace LeagueSandbox.GameServer
     /// </summary>
     internal class Server : IDisposable
     {
-        private Dictionary<long, string> _blowfishKeys;
+        private string[] _blowfishKeys;
         private string _serverVersion = "0.2.0";
-        private readonly ILog _logger;
+        private static ILog _logger = LoggerProvider.GetLogger();
         private Game _game;
         private Config _config;
         private ushort _serverPort { get; }
@@ -26,14 +26,15 @@ namespace LeagueSandbox.GameServer
         /// </summary>
         public Server(Game game, ushort port, string configJson)
         {
-            _logger = LoggerProvider.GetLogger();
             _game = game;
             _serverPort = port;
             _config = Config.LoadFromJson(game, configJson);
 
-            _blowfishKeys = new Dictionary<long, string>();
-            foreach (var player in _config.Players)
-                _blowfishKeys.Add(player.Value.PlayerID, player.Value.BlowfishKey);
+            _blowfishKeys = new string[_config.Players.Count];
+            for(int i = 0; i < _config.Players.Count; i++)
+            {
+                _blowfishKeys[i] = _config.Players[i].BlowfishKey;
+            }
         }
 
         /// <summary>

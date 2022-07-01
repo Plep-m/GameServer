@@ -23,7 +23,7 @@ namespace LeagueSandbox.GameServer.API
     {
         // Required variables.
         private static Game _game;
-        private static ILog _logger;
+        private static ILog _logger = LoggerProvider.GetLogger();
         private static MapScriptHandler _map;
 
         /// <summary>
@@ -35,7 +35,6 @@ namespace LeagueSandbox.GameServer.API
         {
             _game = game;
             _map = mapScriptHandler;
-            _logger = LoggerProvider.GetLogger();
         }
 
         public static void AddProtection(IAttackableUnit unit, IAttackableUnit[] dependOnAll, IAttackableUnit[] dependOnSingle)
@@ -340,7 +339,6 @@ namespace LeagueSandbox.GameServer.API
         public static void EndGame(TeamId losingTeam, Vector3 finalCameraPosition, float endGameTimer = 5000.0f, bool moveCamera = true, float cameraTimer = 3.0f, bool disableUI = true, IDeathData deathData = null)
         {
             //TODO: check if mapScripts should handle this directly
-            var players = _game.PlayerManager.GetPlayers();
 
             if (deathData != null)
             {
@@ -352,6 +350,7 @@ namespace LeagueSandbox.GameServer.API
                 _game.PacketNotifier.NotifyS2C_SetGreyscaleEnabledWhenDead(false);
             }
 
+            var players = _game.PlayerManager.GetPlayers(false);
             foreach (var player in players)
             {
                 if (disableUI)
@@ -386,8 +385,8 @@ namespace LeagueSandbox.GameServer.API
         public static void NotifySpawnBroadcast(IGameObject obj)
         {
             //Just a workaround for our current vision problem.
-            _game.PacketNotifier.NotifySpawn(obj, TeamId.TEAM_PURPLE, 0, _game.GameTime, true);
-            _game.PacketNotifier.NotifySpawn(obj, TeamId.TEAM_BLUE, 0, _game.GameTime, true);
+            _game.PacketNotifier.NotifySpawn(obj, TeamId.TEAM_PURPLE, -1, _game.GameTime, true);
+            _game.PacketNotifier.NotifySpawn(obj, TeamId.TEAM_BLUE, -1, _game.GameTime, true);
         }
 
         public static void AddObject(IGameObject obj)
@@ -405,7 +404,7 @@ namespace LeagueSandbox.GameServer.API
             var players = _game.PlayerManager.GetPlayers(true);
             foreach (var player in players)
             {
-                average += player.Item2.Champion.Stats.Level / players.Count;
+                average += player.Champion.Stats.Level / players.Count;
             }
             return (int)average;
         }
