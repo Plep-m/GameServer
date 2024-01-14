@@ -43,15 +43,7 @@ namespace Spells
             var targetPos = GetPointFromUnit(owner, 1150.0f);
 
             FaceDirection(targetPos, owner);
-            //If skin is Pulsefire Ezreal
-            if (ownerSkinID == 5)
-            {
-                SpellCast(owner, 3, SpellSlotType.ExtraSlots, targetPos, targetPos, false, Vector2.Zero);
-            }
-            else
-            {
-                SpellCast(owner, 0, SpellSlotType.ExtraSlots, targetPos, targetPos, false, Vector2.Zero);
-            }
+            SpellCast(owner, 0, SpellSlotType.ExtraSlots, targetPos, targetPos, false, Vector2.Zero);
         }
 
         private void OnStatsUpdate(IAttackableUnit _unit, float diff)
