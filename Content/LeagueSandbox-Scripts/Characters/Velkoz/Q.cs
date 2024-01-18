@@ -10,7 +10,7 @@ using GameServerCore.Enums;
 
 namespace Spells
 {
-    public class PlasmaFission : ISpellScript
+    public class VelkozQ : ISpellScript
     {
         public ISpellScriptMetadata ScriptMetadata { get; private set; } = new SpellScriptMetadata()
         {
@@ -35,7 +35,7 @@ namespace Spells
 
         public void OnSpellCast(ISpell spell)
         {
-            LogDebug("MasterYI W cast");
+            LogDebug("VelkozQ cast");
             
         }
 
