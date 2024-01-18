@@ -61,7 +61,7 @@ namespace Spells
             float ap = owner.Stats.AbilityPower.Total * 0.5f;
             float damage = 60 + (spell.CastInfo.SpellLevel - 1) * 30 + ap;
 
-            target.TakeDamage(owner, damage, DamageType.DAMAGE_TYPE_MAGICAL, DamageSource.DAMAGE_SOURCE_SPELL, false);
+            target.TakeDamage(owner, damage, DamageType.DAMAGE_TYPE_PHYSICAL, DamageSource.DAMAGE_SOURCE_SPELL, false);
 
         }
 
