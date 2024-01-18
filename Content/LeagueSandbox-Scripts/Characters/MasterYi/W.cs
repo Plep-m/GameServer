@@ -44,6 +44,7 @@ namespace Spells
 
         public void OnSpellCast(ISpell spell)
         {
+            LogDebug("MasterYI W cast");
             AddParticleTarget(Owner, Owner, "masteryi_base_w_cas", Owner, flags: 0);
         }
 
