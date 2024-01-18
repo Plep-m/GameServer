@@ -62,8 +62,7 @@ namespace Spells
             float damage = 60 + (spell.CastInfo.SpellLevel - 1) * 30 + ap;
 
             target.TakeDamage(owner, damage, DamageType.DAMAGE_TYPE_MAGICAL, DamageSource.DAMAGE_SOURCE_SPELL, false);
-            AddBuff("Chilled", 3.0f, 1, spell, target, owner);
-            AddParticleTarget(owner, target, "cryo_ice_impact.troy", target, size: 0.5f);
+
         }
 
         public void OnSpellChannel(ISpell spell)
