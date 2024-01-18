@@ -1,98 +1,64 @@
 using GameServerCore.Domain.GameObjects;
 using GameServerCore.Domain.GameObjects.Spell;
 using GameServerCore.Domain.GameObjects.Spell.Missile;
-using GameServerCore.Domain.GameObjects.Spell.Sector;
-using GameServerCore.Enums;
-using GameServerCore.Scripting.CSharp;
-using LeagueSandbox.GameServer.API;
+using static LeagueSandbox.GameServer.API.ApiFunctionManager;
 using LeagueSandbox.GameServer.Scripting.CSharp;
 using System.Numerics;
-using static LeagueSandbox.GameServer.API.ApiFunctionManager;
+using GameServerCore.Scripting.CSharp;
+using System;
+using GameServerCore.Enums;
 
 namespace Spells
 {
-    public class VelkozPlasmaFission : ISpellScript
+    public class PlasmaFission : ISpellScript
     {
         public ISpellScriptMetadata ScriptMetadata { get; private set; } = new SpellScriptMetadata()
         {
+            NotSingleTargetSpell = true,
             TriggersSpellCasts = true,
-            IsDamagingSpell = true
         };
 
-        private IObjAiBase _owner;
-        private ISpell _spell;
-        private float _bonusAd = 0;
+        IObjAiBase Owner;
 
         public void OnActivate(IObjAiBase owner, ISpell spell)
         {
-            _owner = owner;
-            _spell = spell;
-            ApiEventManager.OnUpdateStats.AddListener(this, owner, OnStatsUpdate, false);
+        }
+
+        public void OnDeactivate(IObjAiBase owner, ISpell spell)
+        {
+        }
+
+        public void OnSpellPreCast(IObjAiBase owner, ISpell spell, IAttackableUnit target, Vector2 start, Vector2 end)
+        {
+            Owner = owner;
         }
 
         public void OnSpellCast(ISpell spell)
         {
-            LogInfo("Velkoz Q casted");
-            var owner = spell.CastInfo.Owner;
-            AddParticleTarget(owner, owner, "ezreal_bow", owner, bone: "L_HAND");
+            LogDebug("MasterYI W cast");
+            
         }
 
         public void OnSpellPostCast(ISpell spell)
         {
-            var owner = spell.CastInfo.Owner as IChampion;
-            var ownerSkinID = owner.SkinID;
-            var targetPos = GetPointFromUnit(owner, 1150.0f);
-
-            FaceDirection(targetPos, owner);
-            SpellCast(owner, 0, SpellSlotType.ExtraSlots, targetPos, targetPos, false, Vector2.Zero);
         }
 
-        private void OnStatsUpdate(IAttackableUnit _unit, float diff)
+        public void OnSpellChannel(ISpell spell)
         {
-            float bonusAd = _owner.Stats.AttackDamage.Total * _spell.SpellData.AttackDamageCoefficient;
-            if (_bonusAd != bonusAd)
-            {
-                _bonusAd = bonusAd;
-                SetSpellToolTipVar(_owner, 2, bonusAd, SpellbookType.SPELLBOOK_CHAMPION, 0, SpellSlotType.SpellSlots);
-            }
-        }
-    }
-
-    public class VelkozPlasmaFissionMissile : ISpellScript
-    {
-        public ISpellScriptMetadata ScriptMetadata { get; private set; } = new SpellScriptMetadata()
-        {
-            MissileParameters = new MissileParameters
-            {
-                Type = MissileType.Circle
-            },
-            IsDamagingSpell = true
-            // TODO
-        };
-
-        //Vector2 direction;
-
-        public void OnActivate(IObjAiBase owner, ISpell spell)
-        {
-            ApiEventManager.OnSpellHit.AddListener(this, spell, TargetExecute, false);
+           
         }
 
-        public void TargetExecute(ISpell spell, IAttackableUnit target, ISpellMissile missile, ISpellSector sector)
+        public void OnSpellChannelCancel(ISpell spell, ChannelingStopSource reason)
         {
-            var owner = spell.CastInfo.Owner;
-            var ad = owner.Stats.AttackDamage.Total * spell.SpellData.AttackDamageCoefficient;
-            var ap = owner.Stats.AbilityPower.Total * spell.SpellData.MagicDamageCoefficient;
-            var damage = 15 + spell.CastInfo.SpellLevel * 20 + ad + ap;
-            target.TakeDamage(owner, damage, DamageType.DAMAGE_TYPE_PHYSICAL, DamageSource.DAMAGE_SOURCE_ATTACK, false);
+            
+        }
 
-            for (byte i = 0; i < 4; i++)
-            {
-                owner.Spells[i].LowerCooldown(1);
-            }
+        public void OnSpellPostChannel(ISpell spell)
+        {
+        }
 
-            AddParticleTarget(owner, target, "Ezreal_mysticshot_tar", target);
-            missile.SetToRemove();
-            AddBuff("EzrealRisingSpellForce", 6f, 1, spell, owner, owner);
+        public void OnUpdate(float diff)
+        {
         }
     }
 }
