@@ -46,7 +46,7 @@ namespace Spells
             var owner = spell.CastInfo.Owner;
             var distance = GetPointFromUnit(owner, 1100f);
 
-            SpellCast(owner, 0, SpellSlotType.ExtraSlots, distance, distance, false, Vector2.Zero);
+            SpellCast(owner, 0, SpellSlotType.UseSpellSlot, distance, distance, false, Vector2.Zero);
         }
 
         public void OnSpellChannel(ISpell spell)
