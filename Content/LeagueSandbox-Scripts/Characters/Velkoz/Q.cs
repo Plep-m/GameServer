@@ -1,12 +1,15 @@
-using GameServerCore.Domain.GameObjects;
-using GameServerCore.Domain.GameObjects.Spell;
-using GameServerCore.Domain.GameObjects.Spell.Missile;
-using static LeagueSandbox.GameServer.API.ApiFunctionManager;
-using LeagueSandbox.GameServer.Scripting.CSharp;
-using System.Numerics;
-using GameServerCore.Scripting.CSharp;
 using System;
 using GameServerCore.Enums;
+using GameServerCore.Domain.GameObjects;
+using LeagueSandbox.GameServer.Scripting.CSharp;
+using System.Numerics;
+using GameServerCore.Domain.GameObjects.Spell;
+using GameServerCore.Domain.GameObjects.Spell.Missile;
+using LeagueSandbox.GameServer.API;
+using System.Collections.Generic;
+using static LeagueSandbox.GameServer.API.ApiFunctionManager;
+using GameServerCore.Scripting.CSharp;
+using GameServerCore.Domain.GameObjects.Spell.Sector;
 
 namespace Spells
 {
@@ -14,14 +17,18 @@ namespace Spells
     {
         public ISpellScriptMetadata ScriptMetadata { get; private set; } = new SpellScriptMetadata()
         {
-            NotSingleTargetSpell = true,
             TriggersSpellCasts = true,
+            MissileParameters = new MissileParameters
+            {
+                Type = MissileType.Circle
+            },
+            IsDamagingSpell = true,
         };
 
-        IObjAiBase Owner;
 
         public void OnActivate(IObjAiBase owner, ISpell spell)
         {
+            ApiEventManager.OnSpellHit.AddListener(this, spell, TargetExecute, false);
         }
 
         public void OnDeactivate(IObjAiBase owner, ISpell spell)
@@ -30,7 +37,8 @@ namespace Spells
 
         public void OnSpellPreCast(IObjAiBase owner, ISpell spell, IAttackableUnit target, Vector2 start, Vector2 end)
         {
-            Owner = owner;
+            var targetPos = new Vector2(spell.CastInfo.TargetPosition.X, spell.CastInfo.TargetPosition.Z);
+            FaceDirection(targetPos, owner);
         }
 
         public void OnSpellCast(ISpell spell)
@@ -41,6 +49,21 @@ namespace Spells
 
         public void OnSpellPostCast(ISpell spell)
         {
+            var owner = spell.CastInfo.Owner;
+            var distance = GetPointFromUnit(owner, 1100f);
+
+            SpellCast(owner, 0, SpellSlotType.ExtraSlots, distance, distance, false, Vector2.Zero);
+        }
+
+        public void TargetExecute(ISpell spell, IAttackableUnit target, ISpellMissile missile, ISpellSector sector)
+        {
+            var owner = spell.CastInfo.Owner;
+            float ap = owner.Stats.AbilityPower.Total * 0.5f;
+            float damage = 60 + (spell.CastInfo.SpellLevel - 1) * 30 + ap;
+
+            target.TakeDamage(owner, damage, DamageType.DAMAGE_TYPE_MAGICAL, DamageSource.DAMAGE_SOURCE_SPELL, false);
+            AddBuff("Chilled", 3.0f, 1, spell, target, owner);
+            AddParticleTarget(owner, target, "cryo_ice_impact.troy", target, size: 0.5f);
         }
 
         public void OnSpellChannel(ISpell spell)
